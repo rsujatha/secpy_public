@@ -363,7 +363,7 @@ def get_norm_gal(Ntotal):
 	zs=np.linspace(0.0, 10, num=50)
 	pz=n_distribution(zs)
 	res=simps(pz, zs)
-	A=Ntotal/ res
+	A=Ntotal / res
 	return A
 
 def get_nbar(z, Ntotal=50):
@@ -371,15 +371,21 @@ def get_nbar(z, Ntotal=50):
 	The normalized distribution of galaxies.
 	"""
 	norm=get_norm_gal(Ntotal)
-	return n_distribution(z) /(Ntotal* arcmin2rad**2 )
+
+	#return n_distribution(z) /(Ntotal* arcmin2rad**2 ) # BUG FIX
+	return n_distribution(z) /(arcmin2rad**2 ) * norm
 
 def galaxy_shot_noise(zmin, zmax):
 	"""
 	Shot noise
 	"""
 	zsn=np.linspace(zmin, zmax, num=100)
-	SN_g=1.0/get_nbar(zsn, Ntotal=50)
-	SN=simps(SN_g, zsn)
+	# SN_g=1.0/get_nbar(zsn, Ntotal=50)
+	# SN=simps(SN_g, zsn)
+
+	nbar_in_bin = simps(get_nbar(zsn, Ntotal=50), zsn)
+	SN = 1.0/nbar_in_bin
+
 	return SN
 	
 def SNR_xy(lmin_sn, lmax_sn, ells,clxy,clxx,nlxx,clyy,nlyy,fsky=None):

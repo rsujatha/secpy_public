@@ -8,7 +8,7 @@ import camb
 from camb import model, initialpower
 from secpy.default_params import *
 from secpy.utils import *
-from classy import Class
+#from classy import Class
 from IPython import embed
 import copy
 from scipy.interpolate import RectBivariateSpline

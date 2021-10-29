@@ -14,7 +14,7 @@ from scipy import interpolate
 
 from secpy.utils import btheta2D, Interpolate2D
 from secpy.mass_func import MassFunction
-from default_params import *
+from secpy.default_params import *
 
 from astropy.convolution import convolve
 import astropy.constants as const
