@@ -481,6 +481,42 @@ class MassFunction(object):
             assert(M_max <= np.exp(self.ln_mass_max))
 
         return integrate.dblquad(self.dndmdz, z_min, z_max, lambda m: M_min, lambda m: M_max)[0]
+        
+	def secondary_bias(self,secondaryproperty,m,z,fromval,toval=None):
+		"""
+		secondaryproperty = 'tidal_anisotropy' , 'c200b' , 'spin_peebles' , 'velocity_anisotropy', 'velocity_asphericity'
+		m = mass if z is a number or peakheight if z is "NA"
+		z  = redshift or 'NA'
+		fromval = value of the secondary property 
+		toval = default value is None ,  otherwise we are intrested to obtain average secondary bias for a range of secondary property from fromval to toval
+		"""
+		h1avg = (np.exp(-fromval**2/2)-np.exp(-toval**2/2))/np.sqrt(2*np.pi)
+		if np.exp(-toval**2/2)==0.0:
+			h2avg = (fromval*np.exp(-fromval**2/2))/np.sqrt(2*np.pi)
+		elif np.exp(-fromval**2/2)==0.0:
+			h2avg = (-toval*np.exp(-toval**2/2))/np.sqrt(2*np.pi)
+		else:
+			h2avg = (fromval*np.exp(-fromval**2/2)-toval*np.exp(-toval**2/2))/np.sqrt(2*np.pi)
+		_avg = (special.erf(toval/np.sqrt(2))-special.erf(fromval/np.sqrt(2)))/2
+		if z=='NA':
+			v = m
+		else:
+			v = self.PeakHeight(m,z)
+		mu1 = self.fit(v,self.m1)
+		s1 = self.fit(v,self.s1)
+		# ~ rhofit = self.ro_c200balpha['name1']
+		rhoget = getattr(self,'rho_'+secondaryproperty)
+		rho = rhoget(v)
+		b1avg = self.bias_nu(v ,delta_v=200.) + rho*mu1*h1avg/_avg + 1/2.*rho**2*s1*h2avg/_avg
+		##################### for generating error bar  ################################################################
+		sampling=100
+		rhosamp = rhoget(v,sample_cov=1,sampling=sampling)
+		mu1samp = self.fit(v,self.m1,sample_cov=1,sampling=sampling)
+		s1samp = self.fit(v,self.s1,sample_cov=1,sampling=sampling)
+		b1_fr_err= rhosamp*mu1samp*h1avg/_avg + 1/2.*rhosamp**2*s1samp*h2avg/_avg
+		err_in_b1 = np.std(b1_fr_err,axis=0)
+		return b1avg,err_in_b1 	
+
 
     # def N_cl_log(self, z_min, z_max, M_min=None, M_max=None):
     #     """
