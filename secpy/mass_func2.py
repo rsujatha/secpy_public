@@ -1,10 +1,10 @@
 import numpy as np
 from scipy import interpolate
 from scipy import integrate
-from default_params import *
+from secpy.default_params import *
 from IPython import embed
-import os
 import scipy.special as special
+
 
 class MassFunction(object):
     """
@@ -115,14 +115,16 @@ class MassFunction(object):
         self._initialize_splines()
         if verbose:
             print('\tspline initialized')
-        self.m1 = np.load("../secpy/fits/p_m1_alpha.npz")
-        self.s1 = np.load("../secpy/fits/p_S1_alpha.npz")
-        self.haloprop = {}
-        self.haloprop['c200b'] = np.load("../secpy/fits/pearson_rho_c200b-alpha.npz")
-        self.haloprop['spin_peebles'] = np.load("../secpy/fits/pearson_rho_Spin-alpha.npz")
-        self.haloprop['velocity_anisotropy'] = np.load("../secpy/fits/pearson_rho_beta-alpha.npz")
-        self.haloprop['velocity_asphericity'] = np.load("../secpy/fits/pearson_rho_vc_to_va-alpha.npz")
-        self.haloprop['shape_asphericity'] = np.load("../secpy/fits/pearson_rho_c_to_a-alpha.npz")
+          
+         ## fits for halo assembly bias
+		self.m1 = np.load("../fits/p_m1_alpha.npz")
+		self.s1 = np.load("../fits/p_S1_alpha.npz")
+		self.haloprop = {}
+		self.haloprop['c200b'] = np.load("../fits/")
+		self.haloprop['spin_peebles'] = np.load("../fits/")
+		self.haloprop['velocity_anisotropy'] = np.load("../fits/")
+		self.haloprop['velocity_asphericity'] = np.load("../fits/")
+		self.haloprop['shape_asphericity'] = np.load("../fits/")
         # self._normalize()
         # print('\tnormalizations evaluated')
 
@@ -491,71 +493,72 @@ class MassFunction(object):
             assert(M_max <= np.exp(self.ln_mass_max))
 
         return integrate.dblquad(self.dndmdz, z_min, z_max, lambda m: M_min, lambda m: M_max)[0]
-
-    def secondary_bias(self,secondaryproperty,m,z,fromval,toval=None):
-        """
-        secondaryproperty = 'tidal_anisotropy' , 'c200b' , 'spin_peebles' , 'velocity_anisotropy', 'velocity_asphericity','shape_asphericity'
-        m = mass if z is a number or peakheight if z is "NA"
-        z  = redshift or 'NA'
-        fromval = value of the secondary property 
-        toval = default value is None ,  otherwise we are intrested to obtain average secondary bias for a range of secondary property from fromval to toval
-        """
-        h1avg = (np.exp(-fromval**2/2)-np.exp(-toval**2/2))/np.sqrt(2*np.pi)
-        if np.exp(-toval**2/2)==0.0:
-            h2avg = (fromval*np.exp(-fromval**2/2))/np.sqrt(2*np.pi)
-        elif np.exp(-fromval**2/2)==0.0:
-            h2avg = (-toval*np.exp(-toval**2/2))/np.sqrt(2*np.pi)
-        else:
-            h2avg = (fromval*np.exp(-fromval**2/2)-toval*np.exp(-toval**2/2))/np.sqrt(2*np.pi)
-        _avg = (special.erf(toval/np.sqrt(2))-special.erf(fromval/np.sqrt(2)))/2
-        if z=='NA':
-            v = m
-        else:
-            v = self.PeakHeight(m,z)
-        mu1 = self.fit(v,self.m1)
-        s1 = self.fit(v,self.s1)
+        
+	def secondary_bias(self,secondaryproperty,m,z,fromval,toval=None):
+		"""
+		secondaryproperty = 'tidal_anisotropy' , 'c200b' , 'spin_peebles' , 'velocity_anisotropy', 'velocity_asphericity','shape_asphericity'
+		m = mass if z is a number or peakheight if z is "NA"
+		z  = redshift or 'NA'
+		fromval = value of the secondary property 
+		toval = default value is None ,  otherwise we are intrested to obtain average secondary bias for a range of secondary property from fromval to toval
+		"""
+		h1avg = (np.exp(-fromval**2/2)-np.exp(-toval**2/2))/np.sqrt(2*np.pi)
+		if np.exp(-toval**2/2)==0.0:
+			h2avg = (fromval*np.exp(-fromval**2/2))/np.sqrt(2*np.pi)
+		elif np.exp(-fromval**2/2)==0.0:
+			h2avg = (-toval*np.exp(-toval**2/2))/np.sqrt(2*np.pi)
+		else:
+			h2avg = (fromval*np.exp(-fromval**2/2)-toval*np.exp(-toval**2/2))/np.sqrt(2*np.pi)
+		_avg = (special.erf(toval/np.sqrt(2))-special.erf(fromval/np.sqrt(2)))/2
+		if z=='NA':
+			v = m
+		else:
+			v = self.PeakHeight(m,z)
+		mu1 = self.fit(v,self.m1)
+		s1 = self.fit(v,self.s1)
 		# ~ rhofit = self.ro_c200balpha['name1']
-        if secondaryproperty=='tidal_anisotropy':
-            rho=1
-        else:
-            rho = self.correlation_with_tidalenv(secondaryproperty,v)
-        b1avg = self.bias_nu(v ,delta_v=200.) + rho*mu1*h1avg/_avg + 1/2.*rho**2*s1*h2avg/_avg
+		if secondaryproperty=='tidal_anisotropy':
+			rho=1
+		else:
+			rho = self.correlation_with_tidalenv(secondaryproperty,v)
+		b1avg = self.bias_nu(v ,delta_v=200.) + rho*mu1*h1avg/_avg + 1/2.*rho**2*s1*h2avg/_avg
 		##################### for generating error bar  ################################################################
-        sampling=100
-        if secondaryproperty=='tidal_anisotropy':
-            rhosamp = 1
-        else:
-            rhosamp = self.correlation_with_tidalenv(secondaryproperty,v,sample_cov=1,sampling=sampling)
-        mu1samp = self.fit(v,self.m1,sample_cov=1,sampling=sampling)
-        s1samp = self.fit(v,self.s1,sample_cov=1,sampling=sampling)
-        b1_fr_err= rhosamp*mu1samp*h1avg/_avg + 1/2.*rhosamp**2*s1samp*h2avg/_avg
-        err_in_b1 = np.std(b1_fr_err,axis=0)
-        return b1avg,err_in_b1 	
+		sampling=100
+		if secondaryproperty=='tidal_anisotropy':
+			rhosamp = 1
+		else:
+			rhosamp = self.correlation_with_tidalenv(secondaryproperty,v,sample_cov=1,sampling=sampling)
+		mu1samp = self.fit(v,self.m1,sample_cov=1,sampling=sampling)
+		s1samp = self.fit(v,self.s1,sample_cov=1,sampling=sampling)
+		b1_fr_err= rhosamp*mu1samp*h1avg/_avg + 1/2.*rhosamp**2*s1samp*h2avg/_avg
+		err_in_b1 = np.std(b1_fr_err,axis=0)
+		return b1avg,err_in_b1 	
 
-    def correlation_with_tidalenv(self,secondaryproperty,v,sample_cov=0,sampling=0):
-        if sample_cov==0:
-            rhofit = self.haloprop[secondaryproperty]['name1']
-            rho = np.polyval(rhofit[::-1],np.log(v))
-        elif sample_cov==1:
-            rhofit = np.random.multivariate_normal(self.haloprop[secondaryproperty]['name1'],self.haloprop[secondaryproperty]['name2'],sampling)
-            rho= 0	
-            for i in range(len(self.haloprop[secondaryproperty]['name1'])):
-                rho +=np.log(v.reshape([1,len(v)]))**i*(rhofit[:,i]).reshape([len(rhofit[:,i]),1])
-        return rho
+	def correlation_with_tidalenv(self,secondaryproperty,v,sample_cov=0,sampling=0):
+		if sample_cov==0:
+			rhofit = self.haloprop[secondaryproperty]['name1']
+			rho = np.polyval(rhofit[::-1],np.log(v))
+		elif sample_cov==1:
+			rhofit = np.random.multivariate_normal(self.haloprop[secondaryproperty]['name1'],self.haloprop[secondaryproperty]['name2'],sampling)
+			rho= 0	
+			for i in range(len(self.haloprop[secondaryproperty]['name1'])):
+				rho +=np.log(v.reshape([1,len(v)]))**i*(rhofit[:,i]).reshape([len(rhofit[:,i]),1])
+		return rho
 		
-    def fit(self,v,p,sample_cov=0,sampling=0):
-        """
-        Note that g(z) has already been divided out
-        """
-        if sample_cov==0:
-            fitval = (np.log10(v/1.5)**2*p['name1'][0] + np.log10(v/1.5)*p['name1'][1] + p['name1'][2]).flatten()
-        elif sample_cov==1:
-            fits = np.random.multivariate_normal(p['name1'],p['name2'],sampling)
-            fitval= 0	
-            v = v.reshape([1,len(v)])
-            fits = fits.reshape([sampling,3,1])
-            fitval = (np.log10(v/1.5)**2*fits[:,0,:] + np.log10(v/1.5)*fits[:,1,:] + fits[:,2,:])
-        return fitval
+	def fit(self,v,p,sample_cov=0,sampling=0):
+		"""
+		Note that g(z) has already been divided out
+		"""
+		if sample_cov==0:
+			fitval = (np.log10(v/1.5)**2*p['name1'][0] + np.log10(v/1.5)*p['name1'][1] + p['name1'][2]).flatten()
+		elif sample_cov==1:
+			fits = np.random.multivariate_normal(p['name1'],p['name2'],sampling)
+			fitval= 0	
+			v = v.reshape([1,len(v)])
+			fits = fits.reshape([sampling,3,1])
+			fitval = (np.log10(v/1.5)**2*fits[:,0,:] + np.log10(v/1.5)*fits[:,1,:] + fits[:,2,:])
+		return fitval
+		
     # def N_cl_log(self, z_min, z_max, M_min=None, M_max=None):
     #     """
     #     Total number of dark matter haloes expected within a given mass, redshift bin.

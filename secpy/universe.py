@@ -6,9 +6,9 @@ from astropy import constants as const
 from astropy import units as u
 import camb
 from camb import model, initialpower
-from secpy.default_params import *
-from secpy.utils import *
-from classy import Class
+from default_params import *
+from utils import *
+#from classy import Class
 from IPython import embed
 import copy
 from scipy.interpolate import RectBivariateSpline
